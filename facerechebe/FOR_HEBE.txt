@@ -1,7 +1,0 @@
-FOR HEBE!!!
-
--In the face recognition code there is going to be a variable "name" that will tell you the person it is currently detecting.
-
--For the personal info it should be saved to a variable "person_info"
-
-In the VENV there is all the libraries i am using rn + then some (there are some extras for the pill recognition and such)

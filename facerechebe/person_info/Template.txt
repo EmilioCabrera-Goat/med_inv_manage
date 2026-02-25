@@ -1,4 +1,0 @@
-Name = ""
-Height = ","
-Weight = "lbs"
-Medical Conditions = ""
