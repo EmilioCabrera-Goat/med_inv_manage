@@ -3,44 +3,50 @@
 {% block content %}
 <div class="bg-light min-vh-100 d-flex justify-content-center align-items-center">
 <div class="container">
-	<div class="row justify-content-center">
-    	<div class="col-md-6 col-lg-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
 
-      	<div class="card shadow-sm border-0">
+        <div class="card shadow-sm border-0">
         <div class="card-body p-4">
 
-        	<h3 class="fw-light mb-1">Home</h3>
-          	<p class="text-muted small mb-4">
+            <h3 class="fw-light mb-1">Home</h3>
+            <p class="text-muted small mb-4">
             Take care of your health!
-          	</p>
+            </p>
 
-          	<div class="list-group list-group-flush">
+            <div class="list-group list-group-flush">
 
             <a href="{% url 'dashboard' %}"
-               	class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-              	Dashboard
-              	<span class="text-muted">→</span>
+                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                Dashboard
+                <span class="text-muted">→</span>
             </a>
 
             <a href="{% url 'information-page' %}"
-               	class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-               	Information
-              	<span class="text-muted">→</span>
+                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                Information
+                <span class="text-muted">→</span>
             </a>
 
             <a href="{% url 'support-page' %}"
-               	class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-              	Support
-              	<span class="text-muted">→</span>
+                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                Support
+                <span class="text-muted">→</span>
             </a>
 
-          	</div>
+            <a href="{% url 'pill-detection' %}"
+                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                Pill Recognition
+                <span class="text-muted">→</span>
+            </a>
+
+            </div>
 
         </div>
-      	</div>
+        </div>
 
     </div>
-  	</div>
+    </div>
 </div>
 </div>
 {% endblock content %}

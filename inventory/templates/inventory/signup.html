@@ -1,35 +1,70 @@
-{% extends "inventory/base.html" %}
-{% load crispy_forms_tags %}
-
+{% extends 'inventory/base.html' %}
 {% block content %}
-	<div class='row'>
-		<div class="col-11 col-md-4 mx-auto mt-5">
-			<h1>Sign Up</h1>
-			{% if form.errors %}
-				{% for field in form %}
-					{% for error in field.errors %}
-						<div class="alert alert-danger">
-							<strong>{{ error|escape }}</strong>
-						</div>
-					{% endfor %}
-				{% endfor %}
-				{% for error in form.non_field_errors %}
-					<div class="alert alert-danger">
-						<strong>{{ error|escape }}</strong>
-					</div>
-				{% endfor %}
-			{% endif %}
+<div class="container">
+    <h2>Sign Up</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
 
-			<form method="post">
-				{% csrf_token %}
-				{{ form|crispy }}
+        <div>
+            <label><strong>Upload your face photo for face login:</strong></label>
+            <input type="file" name="photo" id="photo-input" accept="image/*">
+        </div>
 
-				<button class="btn btn-primary" type='submit'>Sign Up</button>
-			</form>
+        <div id="encoding-status" style="margin-top: 10px; padding: 10px; display: none;">
+        </div>
 
-			<div class='pt-3'>
-				<small class='text-muted'>Already have an account? <a href="{% url 'login' %}" class='ml-2'>Log In</a></small>
-			</div>
-		</div>
-	</div>
-{% endblock content %}
+        <br>
+        <button type="submit" id="submit-btn">Sign Up</button>
+    </form>
+    <p>Already have an account? <a href="{% url 'login' %}">Login</a></p>
+</div>
+
+<script>
+    const photoInput = document.getElementById('photo-input')
+    const encodingStatus = document.getElementById('encoding-status')
+    const submitBtn = document.getElementById('submit-btn')
+
+    photoInput.addEventListener('change', function() {
+        const file = this.files[0]
+        if (!file) return
+
+        encodingStatus.style.display = 'block'
+        encodingStatus.style.backgroundColor = '#fff3cd'
+        encodingStatus.style.color = '#856404'
+        encodingStatus.textContent = 'Checking face encoding, please wait...'
+        submitBtn.disabled = true
+
+        const formData = new FormData()
+        formData.append('photo', file)
+
+        fetch('/check-face-encoding/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            submitBtn.disabled = false
+            encodingStatus.style.display = 'block'
+            if (data.success) {
+                encodingStatus.style.backgroundColor = '#d4edda'
+                encodingStatus.style.color = '#155724'
+                encodingStatus.textContent = 'Face detected and encoding loaded successfully! You can now sign up.'
+            } else {
+                encodingStatus.style.backgroundColor = '#f8d7da'
+                encodingStatus.style.color = '#721c24'
+                encodingStatus.textContent = 'No face detected in this photo. Please upload a clearer photo with your face visible.'
+            }
+        })
+        .catch(() => {
+            submitBtn.disabled = false
+            encodingStatus.style.backgroundColor = '#f8d7da'
+            encodingStatus.style.color = '#721c24'
+            encodingStatus.textContent = 'Error checking photo. Please try again.'
+        })
+    })
+</script>
+{% endblock %}

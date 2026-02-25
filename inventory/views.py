@@ -1,87 +1,193 @@
 from django.shortcuts import render, redirect
-from django.urls import reverse_lazy
-from django.views.generic import TemplateView, View, CreateView, UpdateView, DeleteView, ListView
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import logout, login
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .forms import UserRegisterForm, InventoryItemForm
-from .models import InventoryItem, Category
-from med_inv_manage.settings import LOW_QUANTITY
-from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from .models import InventoryItem, Category, Profile
+from .forms import InventoryItemForm, UserRegisterForm, ProfileForm
+import json
+import base64
+import numpy as np
+import cv2
+import os
+
+# ─── Face Login Views ─────────────────────────────────────────────────────────
+
+def login_view(request):
+    return render(request, 'inventory/facelogin.html', {})
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
+
+@csrf_exempt
+def detect_face_view(request):
+    if request.method == 'POST':
+        from .face_recognition_utils import detect_and_recognize
+        data = json.loads(request.body)
+        image_data = data['image'].split(',')[1]
+        image_bytes = base64.b64decode(image_data)
+        np_arr = np.frombuffer(image_bytes, np.uint8)
+        frame_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+
+        name, person_info = detect_and_recognize(frame_rgb)
+
+        if name:
+            try:
+                user = User.objects.get(username=name)
+                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                return JsonResponse({'success': True, 'redirect': '/dashboard/'})
+            except User.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'User not found'})
+        else:
+            return JsonResponse({'success': False, 'error': 'No face matched'})
+
+@csrf_exempt
+def check_face_encoding(request):
+    if request.method == 'POST':
+        import face_recognition
+        photo = request.FILES.get('photo')
+        if not photo:
+            return JsonResponse({'success': False, 'error': 'No photo provided'})
+        image_bytes = photo.read()
+        np_arr = np.frombuffer(image_bytes, np.uint8)
+        frame_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        encodings = face_recognition.face_encodings(frame_rgb)
+        if len(encodings) > 0:
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False})
+
+# ─── Pill Detection Views ──────────────────────────────────────────────────────
+
+BASE_DIR_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PILL_MODEL_PATH = os.path.join(BASE_DIR_PATH, 'advilrec.pt')
+
+def pill_detection_view(request):
+    return render(request, 'inventory/pill_detection.html', {})
+
+@csrf_exempt
+def detect_pill_view(request):
+    if request.method == 'POST':
+        from ultralytics import YOLO
+        model = YOLO(PILL_MODEL_PATH)
+
+        data = json.loads(request.body)
+        image_data = data['image'].split(',')[1]
+        image_bytes = base64.b64decode(image_data)
+        np_arr = np.frombuffer(image_bytes, np.uint8)
+        frame_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        results = model.predict(source=frame_bgr, device='cpu', conf=0.4)
+
+        detections = []
+        annotated_frame = frame_bgr.copy()
+
+        for r in results:
+            annotated_frame = r.plot()
+            for box in r.boxes:
+                cls_id = int(box.cls[0])
+                label = model.names[cls_id]
+                conf = float(box.conf[0])
+                detections.append({'label': label, 'confidence': round(conf * 100, 1)})
+
+        _, buffer = cv2.imencode('.jpg', annotated_frame)
+        annotated_b64 = base64.b64encode(buffer).decode('utf-8')
+
+        return JsonResponse({
+            'success': True,
+            'detections': detections,
+            'annotated_image': f'data:image/jpeg;base64,{annotated_b64}'
+        })
+
+# ─── Chatbot Views ─────────────────────────────────────────────────────────────
+
+def support_view(request):
+    return render(request, 'inventory/support.html', {})
+
+@csrf_exempt
+def chatbot_view(request):
+    if request.method == 'POST':
+        from ollama import chat
+        data = json.loads(request.body)
+        user_message = data.get('message', '')
+        base_prompt = "I am aware you are an AI chatbot, please answer my question as clearly as possible with the information you have available: "
+        response = chat(model='gemma3', messages=[
+            {
+                'role': 'user',
+                'content': base_prompt + user_message,
+            },
+        ])
+        return JsonResponse({
+            'success': True,
+            'response': response.message.content
+        })
+    return JsonResponse({'success': False})
+
+# ─── Inventory Views ───────────────────────────────────────────────────────────
+
+class SignUpView(CreateView):
+    form_class = UserRegisterForm
+    template_name = 'inventory/signup.html'
+    success_url = reverse_lazy('login')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        photo = self.request.FILES.get('photo')
+        if photo:
+            ext = os.path.splitext(photo.name)[1]
+            photo.name = f"{self.object.username}{ext}"
+            Profile.objects.create(user=self.object, photo=photo)
+        else:
+            Profile.objects.create(user=self.object)
+        return response
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['profile_form'] = ProfileForm()
+        return context
 
 class Index(TemplateView):
-	template_name = 'inventory/index.html'
+    template_name = 'inventory/index.html'
 
-class Dashboard(LoginRequiredMixin, View):
-	def get(self, request):
-		items = InventoryItem.objects.filter(user=self.request.user.id).order_by('id')
+class Dashboard(LoginRequiredMixin, TemplateView):
+    template_name = 'inventory/dashboard.html'
 
-		low_inventory = InventoryItem.objects.filter(
-				user=self.request.user.id,
-				quantity__lte=LOW_QUANTITY
-			)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['items'] = InventoryItem.objects.filter(user=self.request.user)
+        context['low_inventory'] = InventoryItem.objects.filter(user=self.request.user, quantity__lte=10)
+        return context
 
-		if low_inventory.count() > 0:
-			if low_inventory.count() > 1:
-				messages.error(request, f'{low_inventory.count()} items have low inventory')
-			else:
-				messages.error(request, f'{low_inventory.count()} item has low inventory')
+class InformationView(LoginRequiredMixin, TemplateView):
+    template_name = 'inventory/information.html'
 
-		low_inventory_ids = InventoryItem.objects.filter(
-			user=self.request.user.id,
-			quantity__lte=LOW_QUANTITY
-		).values_list('id', flat=True)
-
-		return render(request, 'inventory/dashboard.html', {'items': items, 'low_inventory_ids': low_inventory_ids})
-
-class InformationView(TemplateView):
-	template_name = 'inventory/information.html'
-
-class SupportView(TemplateView):
-	template_name = 'inventory/support.html'
-
-class SignUpView(View):
-	def get(self, request):
-		form = UserRegisterForm()
-		return render(request, 'inventory/signup.html', {'form': form})
-
-	def post(self, request):
-		form = UserRegisterForm(request.POST)
-
-		if form.is_valid(): 
-			form.save()
-			user = authenticate(
-				username=form.cleaned_data['username'],
-				password=form.cleaned_data['password1']
-			)
-
-			login(request, user)
-			return redirect('index')
-
-		return render(request, 'inventory/signup.html', {'form': form})
+class SupportView(LoginRequiredMixin, TemplateView):
+    template_name = 'inventory/support.html'
 
 class AddItem(LoginRequiredMixin, CreateView):
-	model = InventoryItem
-	form_class = InventoryItemForm
-	template_name = 'inventory/item_form.html'
-	success_url = reverse_lazy('dashboard')
+    model = InventoryItem
+    form_class = InventoryItemForm
+    template_name = 'inventory/item_form.html'
+    success_url = reverse_lazy('dashboard')
 
-	def get_context_data(self, **kwargs):
-		context = super().get_context_data(**kwargs)
-		context['categories'] = Category.objects.all()
-		return context
-
-	def form_valid(self, form):
-		form.instance.user = self.request.user
-		return super().form_valid(form)
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        return super().form_valid(form)
 
 class EditItem(LoginRequiredMixin, UpdateView):
-	model = InventoryItem
-	form_class = InventoryItemForm
-	template_name = 'inventory/item_form.html'
-	success_url = reverse_lazy('dashboard')
+    model = InventoryItem
+    form_class = InventoryItemForm
+    template_name = 'inventory/item_form.html'
+    success_url = reverse_lazy('dashboard')
 
 class DeleteItem(LoginRequiredMixin, DeleteView):
-	model = InventoryItem
-	template_name = 'inventory/delete_item.html'
-	success_url = reverse_lazy('dashboard')
-	context_object_name = 'item'
+    model = InventoryItem
+    template_name = 'inventory/delete_item.html'
+    success_url = reverse_lazy('dashboard')

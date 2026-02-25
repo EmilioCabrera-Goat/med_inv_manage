@@ -1,0 +1,94 @@
+{% extends 'inventory/base.html' %}
+{% block content %}
+<div class="container text-center mt-4">
+    <h2>Pill Recognition</h2>
+    <p>Point your camera at a pill to identify it.</p>
+
+    <div style="position: relative; display: inline-block;">
+        <video id="video-element" autoplay style="border-radius: 8px; border: 2px solid #0d6efd;"></video>
+        <canvas id="overlay" style="position: absolute; top: 0; left: 0; display: none;"></canvas>
+    </div>
+
+    <br><br>
+
+    <div id="result-container" style="display: none;">
+        <img id="annotated-image" style="border-radius: 8px; max-width: 100%;">
+    </div>
+
+    <div id="detections" class="mt-3"></div>
+    <p id="status" class="mt-2 text-muted">Scanning...</p>
+
+    <a href="{% url 'index' %}" class="btn btn-secondary mt-3">Back to Home</a>
+</div>
+
+<script>
+    const video = document.getElementById('video-element')
+    const status = document.getElementById('status')
+    const detectionsDiv = document.getElementById('detections')
+    const annotatedImage = document.getElementById('annotated-image')
+    const resultContainer = document.getElementById('result-container')
+    const captureCanvas = document.createElement('canvas')
+
+    if (navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({video: true})
+        .then((stream) => {
+            video.srcObject = stream
+        })
+        .catch(() => {
+            status.textContent = 'Camera access denied.'
+        })
+    }
+
+    function getCookie(name) {
+        return document.cookie.split(';')
+            .find(c => c.trim().startsWith(name + '='))
+            ?.split('=')[1]
+    }
+
+    function captureAndSend() {
+        if (video.videoWidth === 0) return
+
+        captureCanvas.width = video.videoWidth
+        captureCanvas.height = video.videoHeight
+        captureCanvas.getContext('2d').drawImage(video, 0, 0)
+
+        fetch('/pill-detection/detect/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ image: captureCanvas.toDataURL('image/jpeg') })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // show annotated image
+                annotatedImage.src = data.annotated_image
+                resultContainer.style.display = 'block'
+                video.style.display = 'none'
+
+                if (data.detections.length > 0) {
+                    status.style.color = 'green'
+                    status.textContent = 'Pill detected!'
+                    detectionsDiv.innerHTML = data.detections.map(d =>
+                        `<span class="badge bg-primary m-1" style="font-size: 1rem;">
+                            ${d.label} (${d.confidence}%)
+                        </span>`
+                    ).join('')
+                } else {
+                    status.style.color = 'orange'
+                    status.textContent = 'No pill detected, trying again...'
+                    resultContainer.style.display = 'none'
+                    video.style.display = 'inline'
+                }
+            }
+        })
+        .catch(() => {
+            status.textContent = 'Error contacting server.'
+        })
+    }
+
+    setInterval(captureAndSend, 2000)
+</script>
+{% endblock %}

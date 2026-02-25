@@ -1,0 +1,97 @@
+{% extends 'inventory/base.html' %}
+{% block content %}
+<div class="container text-center">
+    <h2>Face Login</h2>
+    <p>Position your face inside the circle.</p>
+    <div style="position: relative; display: inline-block;">
+        <video id="video-element" autoplay style="border-radius: 8px;"></video>
+        <canvas id="overlay" style="position: absolute; top: 0; left: 0;"></canvas>
+    </div>
+    <br>
+    <p id="status">Scanning...</p>
+    <a href="{% url 'login' %}">Use password instead</a>
+</div>
+
+<script>
+    const video = document.getElementById('video-element')
+    const overlay = document.getElementById('overlay')
+    const overlayCtx = overlay.getContext('2d')
+    const captureCanvas = document.createElement('canvas')
+    const status = document.getElementById('status')
+
+    if (navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({video: true})
+        .then((stream) => {
+            video.srcObject = stream
+            video.onloadedmetadata = () => {
+                overlay.width = video.videoWidth
+                overlay.height = video.videoHeight
+                drawCircle()
+            }
+        })
+        .catch(() => {
+            status.textContent = 'Camera access denied.'
+        })
+    }
+
+    function drawCircle() {
+        const cx = overlay.width / 2
+        const cy = overlay.height / 2
+        const radius = 150
+        overlayCtx.clearRect(0, 0, overlay.width, overlay.height)
+        overlayCtx.beginPath()
+        overlayCtx.arc(cx, cy, radius, 0, 2 * Math.PI)
+        overlayCtx.strokeStyle = 'lime'
+        overlayCtx.lineWidth = 3
+        overlayCtx.stroke()
+    }
+
+    function getCookie(name) {
+        return document.cookie.split(';')
+            .find(c => c.trim().startsWith(name + '='))
+            ?.split('=')[1]
+    }
+
+    function captureAndSend() {
+        if (video.videoWidth === 0) return
+
+        captureCanvas.width = video.videoWidth
+        captureCanvas.height = video.videoHeight
+        captureCanvas.getContext('2d').drawImage(video, 0, 0)
+
+        drawCircle()
+
+        fetch('/facelogin/detect/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ image: captureCanvas.toDataURL('image/jpeg') })
+        })
+        .then(res => res.json())
+.then(data => {
+    console.log('Server response:', data)
+    if (data.success) {
+        status.style.color = 'green'
+        status.style.fontWeight = 'bold'
+        status.style.fontSize = '1.3rem'
+        status.textContent = 'Login Successful! Redirecting...'
+        setTimeout(() => {
+            window.location.href = data.redirect
+        }, 1500)
+    } else {
+        status.style.color = 'red'
+        status.textContent = 'Face not recognized, trying again...'
+        console.log('Error details:', data.error || 'No error message')
+    }
+})
+        .catch((err) => {
+            console.log('Fetch error:', err)
+            status.textContent = 'Error contacting server.'
+        })
+    }
+
+    setInterval(captureAndSend, 2000)
+</script>
+{% endblock %}
