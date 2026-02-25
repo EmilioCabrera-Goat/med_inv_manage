@@ -21,10 +21,21 @@ class Category(models.Model):
         return self.name
 
 class Profile(models.Model):
+    SEX_CHOICES = [
+        ('M', 'Male'),
+        ('F', 'Female'),
+    ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     photo = models.ImageField(blank=True, upload_to='known_people')
     bio = models.TextField(blank=True)
     created = models.DateTimeField(auto_now_add=True)
+
+    # health fields
+    sex = models.CharField(max_length=1, choices=SEX_CHOICES, blank=True, null=True)
+    weight = models.FloatField(blank=True, null=True, help_text='Weight in kg')
+    height = models.FloatField(blank=True, null=True, help_text='Height in cm')
+    age = models.IntegerField(blank=True, null=True)
 
     def __str__(self):
         return f"Profile of {self.user.username}"

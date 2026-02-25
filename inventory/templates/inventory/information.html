@@ -1,5 +1,30 @@
 {% extends 'inventory/base.html' %}
+{% load crispy_forms_tags %}
 
 {% block content %}
-<a href="{% url 'index' %}" class="btn btn-outline-primary my-3 mx-4">Back</a>
+<div class="container mt-4" style="max-width: 600px;">
+    <a href="{% url 'index' %}" class="btn btn-outline-primary mb-3">Back</a>
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <h3 class="fw-light mb-1">Health Information</h3>
+            <p class="text-muted small mb-4">This information is saved to your account and can be updated anytime.</p>
+
+            {% if profile.sex or profile.weight or profile.height or profile.age %}
+            <div class="alert alert-info mb-4">
+                <strong>Current Info:</strong>
+                Sex: {{ profile.get_sex_display|default:"Not set" }} |
+                Weight: {{ profile.weight|default:"Not set" }} kg |
+                Height: {{ profile.height|default:"Not set" }} cm |
+                Age: {{ profile.age|default:"Not set" }}
+            </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <button type="submit" class="btn btn-primary mt-3">Save</button>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock content %}

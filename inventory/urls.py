@@ -1,16 +1,16 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from .views import (
-    SignUpView, Index, Dashboard, InformationView,
+    SignUpView, Index, Dashboard,
     AddItem, EditItem, DeleteItem, login_view, detect_face_view,
     check_face_encoding, pill_detection_view, detect_pill_view,
-    support_view, chatbot_view
+    support_view, chatbot_view, information_view
 )
 
 urlpatterns = [
     path('', Index.as_view(), name='index'),
     path('dashboard/', Dashboard.as_view(), name='dashboard'),
-    path('information/', InformationView.as_view(), name='information-page'),
+    path('information/', information_view, name='information-page'),
     path('support/', support_view, name='support-page'),
     path('add-item/', AddItem.as_view(), name='add-item'),
     path('edit-item/<int:pk>', EditItem.as_view(), name='edit-item'),

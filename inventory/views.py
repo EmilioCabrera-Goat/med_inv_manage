@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from .models import InventoryItem, Category, Profile
-from .forms import InventoryItemForm, UserRegisterForm, ProfileForm
+from .forms import InventoryItemForm, UserRegisterForm, ProfileForm, HealthInfoForm
 import json
 import base64
 import numpy as np
@@ -84,7 +84,7 @@ def detect_pill_view(request):
         np_arr = np.frombuffer(image_bytes, np.uint8)
         frame_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-        results = model.predict(source=frame_bgr, device='cpu', conf=0.4)
+        results = model.predict(source=frame_bgr, device='cpu', conf=0.9) #CHANGE THIS TO GPU ON THE PC PLEASEEEE att. Emilio to Emilio
 
         detections = []
         annotated_frame = frame_bgr.copy()
@@ -112,18 +112,41 @@ def support_view(request):
     return render(request, 'inventory/support.html', {})
 
 @csrf_exempt
+@csrf_exempt
 def chatbot_view(request):
     if request.method == 'POST':
         from ollama import chat
         data = json.loads(request.body)
         user_message = data.get('message', '')
-        base_prompt = "I am aware you are an AI chatbot, please answer my question as clearly as possible with the information you have available: "
+
+        health_context = ""
+        if request.user.is_authenticated:
+            try:
+                profile = Profile.objects.get(user=request.user)
+                if any([profile.sex, profile.weight, profile.height, profile.age]):
+                    health_context = f"""
+The user has provided the following health information:
+- Sex: {profile.get_sex_display() if profile.sex else 'Not provided'}
+- Weight: {str(profile.weight) + ' kg' if profile.weight else 'Not provided'}
+- Height: {str(profile.height) + ' cm' if profile.height else 'Not provided'}
+- Age: {profile.age if profile.age else 'Not provided'}
+
+Please take this into account when answering health related questions.
+"""
+            except Profile.DoesNotExist:
+                pass
+
+        base_prompt = f"""You are a helpful health assistant. I am aware you are an AI chatbot, please answer my question as clearly as possible with the information you have available.
+{health_context}
+User question: """
+
         response = chat(model='gemma3', messages=[
             {
                 'role': 'user',
                 'content': base_prompt + user_message,
             },
         ])
+
         return JsonResponse({
             'success': True,
             'response': response.message.content
@@ -165,8 +188,19 @@ class Dashboard(LoginRequiredMixin, TemplateView):
         context['low_inventory'] = InventoryItem.objects.filter(user=self.request.user, quantity__lte=10)
         return context
 
-class InformationView(LoginRequiredMixin, TemplateView):
-    template_name = 'inventory/information.html'
+@login_required
+def information_view(request):
+    profile, created = Profile.objects.get_or_create(user=request.user)
+
+    if request.method == 'POST':
+        form = HealthInfoForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            return redirect('information-page')
+    else:
+        form = HealthInfoForm(instance=profile)
+
+    return render(request, 'inventory/information.html', {'form': form, 'profile': profile})
 
 class SupportView(LoginRequiredMixin, TemplateView):
     template_name = 'inventory/support.html'
