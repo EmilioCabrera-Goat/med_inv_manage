@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-3qlukxel0j!8p5)a8ilrx9n#zs308le+yzu&j1x52pl24xf-v0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'logs',
     'profile',
-
 ]
 
 MIDDLEWARE = [
@@ -61,7 +60,6 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [],
-
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -135,3 +133,7 @@ LOGOUT_REDIRECT_URL = 'index'
 LOGIN_URL = 'login'
 
 LOW_QUANTITY = 12
+
+# Media files (uploaded images)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
