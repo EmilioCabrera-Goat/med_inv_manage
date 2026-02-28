@@ -84,7 +84,7 @@ def detect_pill_view(request):
         np_arr = np.frombuffer(image_bytes, np.uint8)
         frame_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-        results = model.predict(source=frame_bgr, device='cpu', conf=0.9) #CHANGE THIS TO GPU ON THE PC PLEASEEEE att. Emilio to Emilio
+        results = model.predict(source=frame_bgr, device='CUDA', conf=0.9) #CHANGE THIS TO GPU ON THE PC PLEASEEEE att. Emilio to Emilio
 
         detections = []
         annotated_frame = frame_bgr.copy()

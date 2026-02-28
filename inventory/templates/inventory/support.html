@@ -24,6 +24,8 @@
     <small class="text-muted mt-1 d-block">Press Enter to send</small>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
 <script>
     const chatBox = document.getElementById('chat-box')
     const userInput = document.getElementById('user-input')
@@ -57,14 +59,14 @@
         } else if (role === 'bot') {
             div.innerHTML = `
                 <div style="text-align: left;">
-                    <span style="
+                    <div style="
                         background: white;
                         border: 1px solid #dee2e6;
                         padding: 8px 12px;
                         border-radius: 15px 15px 15px 0;
                         display: inline-block;
                         max-width: 80%;
-                    ">${text}</span>
+                    ">${marked.parse(text)}</div>
                 </div>`
         } else if (role === 'thinking') {
             div.id = 'thinking-indicator'
