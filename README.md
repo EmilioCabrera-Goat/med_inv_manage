@@ -35,3 +35,10 @@ pip install numpy==2.4.2
 pip install pillow==12.1.1
 pip install setuptools==82.0.0
 ```
+
+### 4. Running the Server
+
+```bash
+cd /home/emi_zabuntu/med_inv_manage67 && /home/emi_zabuntu/med_inv_manage67/world0/bin/uvicorn med_inv_manage.asgi:application --host 0.0.0.0 --port 8000 --ssl-keyfile key.pem --ssl-certfile cert.pem
+#INSERT CORRECT PROJECT DIRECTORY
+```
