@@ -1,0 +1,13 @@
+.face-guide-circle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px; /* Diameter = Radius * 2 */
+    height: 200px;
+    border: 3px dashed #00ff00; /* Green color from your script */
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 10;
+}
+
