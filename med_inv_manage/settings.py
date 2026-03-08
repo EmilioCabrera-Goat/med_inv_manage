@@ -134,6 +134,7 @@ LOGOUT_REDIRECT_URL = 'index'
 LOGIN_URL = 'login'
 
 LOW_QUANTITY = 12
+WARNING_QUANTITY = 16
 
 # Media files (uploaded images)
 MEDIA_URL = '/media/'

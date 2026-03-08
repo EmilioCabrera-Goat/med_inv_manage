@@ -52,6 +52,8 @@
                    <td>{{ item.name }}</td>
                    {% if item.id in low_inventory_ids %}
                       <td class="text-danger">{{ item.quantity }}</td>
+                   {% elif item.id in warning_inventory_ids %}
+                     <td class="text-warning">{{ item.quantity }}</td>
                    {% else %}
                       <td class="text-success">{{ item.quantity }}</td>
                    {% endif %}

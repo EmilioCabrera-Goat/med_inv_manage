@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 
-from med_inv_manage.settings import LOW_QUANTITY
+from med_inv_manage.settings import LOW_QUANTITY, WARNING_QUANTITY
 from .models import InventoryItem, Category, Profile
 from .forms import InventoryItemForm, UserRegisterForm, ProfileForm, HealthInfoForm
 import json
@@ -201,7 +201,9 @@ class Dashboard(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context['items'] = InventoryItem.objects.filter(user=self.request.user)
         low_inventory = InventoryItem.objects.filter(user=self.request.user, quantity__lte=LOW_QUANTITY)
+        warning_inventory = InventoryItem.objects.filter(user=self.request.user, quantity__gt=LOW_QUANTITY, quantity__lt=WARNING_QUANTITY)
         context['low_inventory_ids'] = list(low_inventory.values_list('id', flat=True))
+        context['warning_inventory_ids'] = list(warning_inventory.values_list('id', flat=True))
         return context
 
 @login_required
