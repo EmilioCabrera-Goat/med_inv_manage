@@ -51,11 +51,9 @@
                    <th scope="row">{{ item.id }}</th>
                    <td>{{ item.name }}</td>
                    {% if item.id in low_inventory_ids %}
-                      <td class="text-danger">{{ item.quantity }}
-                      </td>
+                      <td class="text-danger">{{ item.quantity }}</td>
                    {% else %}
-                      <td class="text-success">{{ item.quantity }}
-                      </td>
+                      <td class="text-success">{{ item.quantity }}</td>
                    {% endif %}
                    <td>{{ item.category.name }}</td>
                    <td><a href="{% url 'edit-item' item.id %}" class="btn btn-outline-secondary">Edit</a></td>

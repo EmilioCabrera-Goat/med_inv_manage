@@ -7,6 +7,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
+
+from med_inv_manage.settings import LOW_QUANTITY
 from .models import InventoryItem, Category, Profile
 from .forms import InventoryItemForm, UserRegisterForm, ProfileForm, HealthInfoForm
 import json
@@ -84,7 +86,7 @@ def detect_pill_view(request):
         np_arr = np.frombuffer(image_bytes, np.uint8)
         frame_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-        results = model.predict(source=frame_bgr, device='CUDA', conf=0.9) #CHANGE THIS TO GPU ON THE PC PLEASEEEE att. Emilio to Emilio
+        results = model.predict(source=frame_bgr, device='cuda', conf=0.9)
 
         detections = []
         annotated_frame = frame_bgr.copy()
@@ -111,7 +113,6 @@ def detect_pill_view(request):
 def support_view(request):
     return render(request, 'inventory/support.html', {})
 
-@csrf_exempt
 @csrf_exempt
 def chatbot_view(request):
     if request.method == 'POST':
@@ -166,7 +167,21 @@ class SignUpView(CreateView):
         if photo:
             ext = os.path.splitext(photo.name)[1]
             photo.name = f"{self.object.username}{ext}"
-            Profile.objects.create(user=self.object, photo=photo)
+            profile = Profile.objects.create(user=self.object, photo=photo)
+            print(f"Photo saved to: {profile.photo.path}")
+
+            # reload face encodings so new user can login immediately without restart
+            import face_recognition as fr
+            from . import face_recognition_utils as fru
+            try:
+                img = fr.load_image_file(profile.photo.path)
+                encodings = fr.face_encodings(img)
+                if encodings:
+                    fru.known_face_encodings.append(encodings[0])
+                    fru.known_face_names.append(self.object.username)
+                    print(f"Reloaded encoding for: {self.object.username}")
+            except Exception as e:
+                print(f"Could not reload encoding: {e}")
         else:
             Profile.objects.create(user=self.object)
         return response
@@ -185,7 +200,8 @@ class Dashboard(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['items'] = InventoryItem.objects.filter(user=self.request.user)
-        context['low_inventory'] = InventoryItem.objects.filter(user=self.request.user, quantity__lte=10)
+        low_inventory = InventoryItem.objects.filter(user=self.request.user, quantity__lte=LOW_QUANTITY)
+        context['low_inventory_ids'] = list(low_inventory.values_list('id', flat=True))
         return context
 
 @login_required

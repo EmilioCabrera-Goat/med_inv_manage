@@ -7,7 +7,7 @@ from mediapipe.tasks.python import vision
 
 # use absolute path so it always finds the folder
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-KNOWN_DIR = os.path.join(BASE_DIR, 'known_people')
+KNOWN_DIR = os.path.join(BASE_DIR, 'media', 'known_people')
 TFLITE_PATH = os.path.join(BASE_DIR, 'detector.tflite')
 PERSON_INFO_DIR = os.path.join(BASE_DIR, 'person_info')
 
@@ -15,6 +15,9 @@ known_face_encodings = []
 known_face_names = []
 
 print(f"Looking for known faces in: {KNOWN_DIR}")
+
+# create folder if it doesn't exist
+os.makedirs(KNOWN_DIR, exist_ok=True)
 
 for filename in os.listdir(KNOWN_DIR):
     path = os.path.join(KNOWN_DIR, filename)
