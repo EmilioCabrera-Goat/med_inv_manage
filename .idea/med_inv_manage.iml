@@ -4,8 +4,9 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/env" />
       <excludeFolder url="file://$MODULE_DIR$/world0" />
+      <excludeFolder url="file://$MODULE_DIR$/.World0" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.12 (med_inv_manage)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.12 (med_inv_manage67) (2)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">
